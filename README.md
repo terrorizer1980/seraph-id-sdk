@@ -59,14 +59,14 @@ wallet.addClaim(claim);
 
 Encrypt and export wallet:
 ```js
-wallet.encryptAll('password');
-var exportedWalletJson = wallet.export();
+account.encrypt('password');
+const exportedWalletJSON = JSON.stringify(wallet.export());
 ```
 
 Import wallet, decrypt it and get all claims of a specified DID or a claim by ID:
 ```js
-var wallet = new seraphId.SeraphIDWallet(exportedWalletJson);
-wallet.decryptAll('password');
+const wallet = new SeraphIDWallet(JSON.parse(exportedWalletJSON));
+account.decrypt('password');
 
 var allClaims = wallet.getAllClaims('did:neoid:priv:AKkkumHbBipZ46UMZJoFynJMXzSRnBvKcs');
 var claim = wallet.getClaim('claimId');
@@ -76,12 +76,12 @@ var claim = wallet.getClaim('claimId');
 
 Create issuer instance:
 ```js
-var issuer = new seraphId.SeraphIDIssuer('issuerSmartContractScriptHash', 'http://localhost:10332', 'http://localhost:4000/api/main_net', DIDNetwork.PrivateNet);
+var issuer = new seraphId.SeraphIDIssuer('issuerSmartContractScriptHash', 'http://localhost:10332', DIDNetwork.PrivateNet, 5195086);
 ```
 
 Create a new (revokable) credentials schema:
 ```js
-issuer.registerNewSchema('schemaName', ['firstName', 'lastName', 'age'], true);
+issuer.registerNewSchema('schemaName', ['firstName', 'lastName', 'age'], true, 'issuerPrivateKey');
 ```
 
 Create and issue a claim: 
@@ -93,14 +93,14 @@ issuer.issueClaim(claim, 'issuerPrivateKey');
 
 Revoke previously issued claim (if schema allows revocation):
 ```js
-issuer.revokeClaimById('claimId');
+issuer.revokeClaimById('claimId','issuerPrivateKey');
 ```
 
 #### Seraph ID Verifier
 
 Create verifier instance:
 ```js
-var verifier = new seraphId.SeraphIDVerifier('issuerSmartContractScriptHash', 'http://localhost:10332', 'http://localhost:4000/api/main_net', DIDNetwork.PrivateNet);
+var verifier = new seraphId.SeraphIDVerifier('issuerSmartContractScriptHash', 'http://localhost:10332', DIDNetwork.PrivateNet, 5195086);
 ```
 
 Get meta-data of issuer's credentials schema:
@@ -113,11 +113,6 @@ Verify the given owner's claim offline (having issuer's public key):
 var verfied = verifier.verifyOffline(claim, 'issuerPublicKey');
 ```
 
-Verify the given owner's claim online (calling issuer's smart contract):
-```js
-var verfied = verifier.verify(claim);
-```
-
 Validate the given owner's claim. Validation includes online verification, claim revocation and validity dates check. Optionally custom validation function can be passed.
 ```js
 var valid = verifier.validateClaim(claim, function customClaimValidator(clm) {
@@ -127,14 +122,14 @@ var valid = verifier.validateClaim(claim, function customClaimValidator(clm) {
 
 Check if issuer of owner's claim is trusted by the given Root of Trust:
 ```js
-var trusted = verifier.isIssuerTrusted('scriptHashOfRoTSmartContract', claim.issuerDID, claim.schema);
+var trusted = verifier.isIssuerTrusted('scriptHashOfRoTSmartContract', claim.issuerDID, claim.schemaName);
 ```
 
 #### Seraph ID Root of Trust
 
 Create Root of Trust instance:
 ```js
-var rot = new seraphId.SeraphIDRootOfTrust('rotSmartContractScriptHash', 'http://localhost:10332', 'http://localhost:4000/api/main_net', DIDNetwork.PrivateNet);
+var rot = new seraphId.SeraphIDRootOfTrust('rotSmartContractScriptHash', 'http://localhost:10332', DIDNetwork.PrivateNet, 5195086);
 ```
 
 Register issuer's DID and schema as trusted:
@@ -163,7 +158,7 @@ This repository is a typescript repository using Yarn. Please ensure the followi
 - Node (latest LTS)
 
 ```sh
-git clone https://github.com/swisscom-blockchain/seraph-id-sdk.git
+git clone https://github.com/neo-ngd/seraph-id-sdk.git
 cd seraph-id-sdk
 yarn
 yarn build
@@ -172,7 +167,7 @@ yarn build
 ## Testing
 
 Before executing unit tests, please make sure to have:
-- Issuer's smart contract deployed on your network.
+- Both the smart contract of Issuer and RootOfTrust are deployed on your network.
 - Network information and test data maintained properly in `__tests__/test-data.json` file.
 
 ```sh
@@ -181,8 +176,8 @@ yarn test
 
 # References
 - Seraph ID official page: https://seraphid.io
-- Seraph ID demo application on [GitHub](https://github.com/swisscom-blockchain/seraph-id-demo)
-- Seraph ID smart contract templates and examples on [GitHub](https://github.com/swisscom-blockchain/seraph-id-smart-contracts)
+- Seraph ID demo application on [GitHub](https://github.com/neo-ngd/seraph-id-demo)
+- Seraph ID smart contract templates and examples on [GitHub](https://github.com/neo-ngd/seraph-id-smart-contracts)
 - Seraph ID chrome extension [GitHub](https://github.com/swisscom-blockchain/seraph-id-chrome-extension)
 - Seraph ID DID resolver on
   [GitHub](https://github.com/swisscom-blockchain/seraph-id-did-driver)

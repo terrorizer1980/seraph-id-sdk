@@ -30,7 +30,7 @@ The Seraph ID subject is "neoid" and the following format is required:
 
 ```json
 did = "did:neoid:" network ":" specific-idstring
-network = ("test" / "main")
+network = ("test" / "main" / "priv")
 specific-idstring = NEO public address or issuer smart contract ScriptHash (see below)
 ```
 
@@ -119,6 +119,6 @@ The following example shows the extensive DID method definition proposed for a s
 
 # References
 - Seraph ID official page: https://seraphid.io
-- Seraph ID demo application on [GitHub](https://github.com/swisscom-blockchain/seraph-id-demo)
-- Seraph ID SDK on [GitHub](https://github.com/swisscom-blockchain/seraph-id-sdk)
-- Seraph ID smart contract templates and examples on [GitHub](https://github.com/swisscom-blockchain/seraph-id-smart-contracts)
+- Seraph ID demo application on [GitHub](https://github.com/neo-ngd/seraph-id-demo)
+- Seraph ID SDK on [GitHub](https://github.com/neo-ngd/seraph-id-sdk)
+- Seraph ID smart contract templates and examples on [GitHub](https://github.com/neo-ngd/seraph-id-smart-contracts.git)
