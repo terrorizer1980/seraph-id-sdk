@@ -1,5 +1,5 @@
 {
-  "name": "@neo/seraph-id-sdk",
+  "name": "@sbc/seraph-id-sdk",
   "version": "3.0.1",
   "description": "Seraph ID SDK",
   "main": "lib/index.js",
