@@ -17,16 +17,15 @@ export class SeraphIDVerifier {
    * Default constructor.
    * @param scriptHash Script hash of issuer's smart contract.
    * @param networkRpcUrl URL to NEO RPC.
-   * @param neoscanUrl URL to NEOSCAN API
    * @param network Network identifier used for DID
    */
   constructor(
     protected readonly issuerScriptHash: string,
     protected readonly networkRpcUrl: string,
-    protected readonly neoscanUrl: string,
     protected readonly network: DIDNetwork,
+    protected readonly magic: number,
   ) {
-    this.contract = new SeraphIDIssuerContract(issuerScriptHash, networkRpcUrl, neoscanUrl, network);
+    this.contract = new SeraphIDIssuerContract(issuerScriptHash, networkRpcUrl, network, magic);
   }
 
   /**
@@ -44,12 +43,15 @@ export class SeraphIDVerifier {
     }
 
     // Verify offline with valid Issuer's public key.
-    const issuerPublicKey = await this.contract.getIssuerPublicKey();
-    if (!this.verifyOffline(claim, issuerPublicKey)) {
-      return false;
+    const issuerPublicKeys = await this.contract.getIssuerPublicKeys();
+    for (var i = 0; i < issuerPublicKeys.length; i++)
+    {
+      if (this.verifyOffline(claim, issuerPublicKeys[i]))
+      {
+        return true;
+      }
     }
-
-    return true;
+    return false;
   }
 
   /**
@@ -110,7 +112,7 @@ export class SeraphIDVerifier {
    * @returns True if issuer and their schema is trusted by RoT.
    */
   public async isIssuerTrusted(rotScriptHash: string, issuerDID: string, schemaName: string): Promise<boolean> {
-    return new SeraphIDRootOfTrust(rotScriptHash, this.networkRpcUrl, this.neoscanUrl, this.network).isTrusted(issuerDID, schemaName);
+    return new SeraphIDRootOfTrust(rotScriptHash, this.networkRpcUrl, this.network, this.magic).isTrusted(issuerDID, schemaName);
   }
 
   /**
@@ -153,4 +155,6 @@ export class SeraphIDVerifier {
 
     return did.substr(idx + 1);
   }
+
+  
 }

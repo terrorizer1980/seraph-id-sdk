@@ -8,3 +8,4 @@ export * from './issuer';
 export * from './rot';
 export * from './verifier';
 export * from './wallet';
+//# sourceMappingURL=index.d.ts.map

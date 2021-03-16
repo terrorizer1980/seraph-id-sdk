@@ -21,7 +21,7 @@ export interface ISeraphIDWalletJSON extends wallet.WalletJSON {
  */
 export class SeraphIDWallet extends wallet.Wallet {
   // Array of accounts in the wallet.
-  public accounts: SeraphIDAccount[];
+  public accounts2: SeraphIDAccount[];
 
   // Map from did to account index.
   public didMap: { [did: string]: number };
@@ -34,14 +34,20 @@ export class SeraphIDWallet extends wallet.Wallet {
     const tmpAccounts = obj.accounts || [];
     obj.accounts = undefined;
     super(obj);
-    this.accounts = [];
+    this.accounts2 = [];
     this.didMap = {};
 
     for (const acc of tmpAccounts) {
-      this.addAccount(acc);
+      this.addAccount2(acc);
     }
   }
 
+  public export(): ISeraphIDWalletJSON {
+    const acc = super.export() as ISeraphIDWalletJSON;
+    acc.accounts = this.accounts2.map((acct) => acct.export());
+    return acc;
+  }
+  
   /**
    * Adds a new account to this wallet.
    * @param acct The account to be added.
@@ -49,12 +55,12 @@ export class SeraphIDWallet extends wallet.Wallet {
    * @returns The index of added account in the wallet.
    */
   public addDIDAccount(acct: SeraphIDAccount | ISeraphIDAccountJSON, didNetwork: string): number {
-    const index = this.accounts.length;
+    const index = this.accounts2.length;
     if (!(acct instanceof SeraphIDAccount)) {
       acct = new SeraphIDAccount(acct, didNetwork);
     }
 
-    this.accounts.push(acct);
+    this.accounts2.push(acct);
     const did = this.getDID(index);
 
     if (did) {
@@ -69,7 +75,7 @@ export class SeraphIDWallet extends wallet.Wallet {
    * @param acct The account to be added.
    * @returns The index of added account in the wallet.
    */
-  public addAccount(acct: SeraphIDAccount | ISeraphIDAccountJSON): number {
+  public addAccount2(acct: SeraphIDAccount | ISeraphIDAccountJSON): number {
     if (!acct.extra || !acct.extra[SeraphIDAccount.DID_NETWORK]) {
       throw new SeraphIDError('DID network is not defined, please use addDIDAccount with specific DID network name');
     }
@@ -82,7 +88,7 @@ export class SeraphIDWallet extends wallet.Wallet {
    * @param claim The claim to be added to the wallet.
    */
   public addClaim(claim: IClaim) {
-    const acc = this.accounts[this.didMap[claim.ownerDID]];
+    const acc = this.accounts2[this.didMap[claim.ownerDID]];
     if (!acc) {
       throw new SeraphIDError(`DID account ${claim.ownerDID} is not a part of this wallet. Add account first.`);
     }
@@ -96,10 +102,9 @@ export class SeraphIDWallet extends wallet.Wallet {
    * @returns The claim if exists, undefined otherwise.
    */
   public getClaim(claimId: string): IClaim | undefined {
-    for (const acc of this.accounts) {
-      if (acc.getClaim(claimId)) {
-        return acc.getClaim(claimId);
-      }
+    for (const acc of this.accounts2) {
+      var claim = acc.getClaim(claimId);
+      if (claim) return claim;
     }
   }
 
@@ -113,7 +118,6 @@ export class SeraphIDWallet extends wallet.Wallet {
     if (account) {
       return account.getAllClaims();
     }
-
     return [];
   }
 
@@ -124,7 +128,7 @@ export class SeraphIDWallet extends wallet.Wallet {
   public createDID(network: string): string {
     const privKey = wallet.generatePrivateKey();
     const acct = new SeraphIDAccount(privKey, network);
-    this.addAccount(acct);
+    this.addAccount2(acct);
 
     return acct.getDID();
   }
@@ -135,8 +139,8 @@ export class SeraphIDWallet extends wallet.Wallet {
    * @returns DID string if account exists, undefined otherwise.
    */
   public getDID(index: number): string | undefined {
-    if (this.accounts[index]) {
-      return this.accounts[index].getDID();
+    if (this.accounts2[index]) {
+      return this.accounts2[index].getDID();
     }
   }
 
@@ -148,8 +152,8 @@ export class SeraphIDWallet extends wallet.Wallet {
   public getAccountByDID(did: string): SeraphIDAccount | undefined {
     const idx = this.didMap[did];
 
-    if (idx !== undefined && this.accounts.length > idx) {
-      return this.accounts[idx];
+    if (idx !== undefined && this.accounts2.length > idx) {
+      return this.accounts2[idx];
     }
   }
 
@@ -160,4 +164,5 @@ export class SeraphIDWallet extends wallet.Wallet {
   public getAllDIDs(): string[] {
     return Object.keys(this.didMap);
   }
+
 }

@@ -1,7 +1,5 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
-
-import { tx } from '@cityofzion/neon-core';
 import { rpc, sc } from '@cityofzion/neon-js';
 import { DIDNetwork, ISchema, IssuerOperation, SeraphIDError } from './common';
 import { SeraphIDContractBase } from './contract-base';
@@ -14,16 +12,15 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    * Default constructor.
    * @param scriptHash Script hash of issuer's smart contract.
    * @param networkRpcUrl URL to NEO RPC.
-   * @param neoscanUrl URL to NEOSCAN API
    * @param network Network identifier used for DID
    */
   constructor(
     protected readonly scriptHash: string,
     protected readonly networkRpcUrl: string,
-    protected readonly neoscanUrl: string,
     protected readonly network: DIDNetwork,
+    protected readonly magic: number,
   ) {
-    super(networkRpcUrl, neoscanUrl, network);
+    super(networkRpcUrl, network, magic);
   }
 
   /**
@@ -46,8 +43,105 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    * Returns public key of the issuer required to validate claim's signature.
    * @returns Issuer's public key.
    */
-  public async getIssuerPublicKey(): Promise<string> {
-    return this.getStringFromOperation(this.scriptHash, IssuerOperation.PublicKey);
+  public async getIssuerPublicKeys(): Promise<string[]> {
+    return this.getStringArrayFromOperation(this.scriptHash, IssuerOperation.GetPublicKeys);
+  }
+
+  /**
+   * Initiate recovery list with signed message by certain public key
+   * @param threshold minimum recoveries needed to perform an action
+   * @param members recovery list
+   * @param pubKeyIndex the index of public key used to sign message
+   * @param message original message
+   * @param signature signed message
+   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
+   * @param gas Additional gas to be sent with invocation transaction.
+   * @returns Transaction hash.
+   */
+  public async InitRecovery(threshold: number, members:string[], pubKeyIndex: number, message: string, signature: string, issuerPrivateKey: string, gas?: number): Promise<string> {
+    const script = sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.SetRecovery,
+      args:
+        [sc.ContractParam.integer(threshold),
+        sc.ContractParam.array(...members.map(member => sc.ContractParam.byteArray(member))), 
+        sc.ContractParam.integer(pubKeyIndex),
+        sc.ContractParam.byteArray(message),
+        sc.ContractParam.byteArray(signature)]
+    });
+    console.log(this.scriptHash);
+    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
+  }
+  
+  /**
+   * Initiate recovery list with signed message by certain public key
+   * @param threshold minimum recoveries needed to perform an action
+   * @param members recovery list
+   * @param recoveryIndexes the index of public key used to sign message
+   * @param message original message
+   * @param signatures signed messages
+   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
+   * @param gas Additional gas to be sent with invocation transaction.
+   * @returns Transaction hash.
+   */
+  public async ResetRecovery(threshold: number, members:string[], recoveryIndexes: number[], message: string, signatures: string[], issuerPrivateKey: string, gas?: number): Promise<string> {
+    const script = sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.SetRecovery,
+      args: 
+        [sc.ContractParam.integer(threshold),
+        sc.ContractParam.array(...members.map(member => sc.ContractParam.byteArray(member))), 
+        sc.ContractParam.array(...recoveryIndexes.map(recoveryIndex => sc.ContractParam.integer(recoveryIndex))), 
+        sc.ContractParam.byteArray(message),
+        sc.ContractParam.array(...signatures.map(signature => sc.ContractParam.byteArray(signature)))],
+    });
+    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
+  }
+
+  /**
+   * Initiate recovery list with signed message by certain public key
+   * @param addedPubKey newly added public key
+   * @param recoveryIndexes the index of public key used to sign message
+   * @param message original message
+   * @param signatures signed messages
+   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
+   * @param gas Additional gas to be sent with invocation transaction.
+   * @returns Transaction hash.
+   */
+  public async AddKeyByRecovery(addedPubKey: string, recoveryIndexes: number[], message: string, signatures: string[], issuerPrivateKey: string, gas?: number): Promise<string> {
+    const script =  sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.AddKeyByRecovery,
+      args: 
+        [sc.ContractParam.byteArray(addedPubKey),
+        sc.ContractParam.array(...recoveryIndexes.map(recoveryIndex => sc.ContractParam.integer(recoveryIndex))), 
+        sc.ContractParam.byteArray(message),
+        sc.ContractParam.array(...signatures.map(signature => sc.ContractParam.byteArray(signature)))],
+    });
+    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
+  }
+
+  /**
+   * Initiate recovery list with signed message by certain public key
+   * @param removedPubKey removed public key
+   * @param recoveryIndexes the index of public key used to sign message
+   * @param message original message
+   * @param signatures signed messages
+   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
+   * @param gas Additional gas to be sent with invocation transaction.
+   * @returns Transaction hash.
+   */
+  public async RemoveKeyByRecovery(removedPubKey: string, recoveryIndexes: number[], message: string, signatures: string[], issuerPrivateKey: string, gas?: number): Promise<string> {
+    const sb = new sc.ScriptBuilder();
+    const script = sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.RemoveKeyByRecovery,
+      args: [sc.ContractParam.byteArray(removedPubKey),
+        sc.ContractParam.array(...recoveryIndexes.map(recoveryIndex => sc.ContractParam.integer(recoveryIndex))), 
+        sc.ContractParam.byteArray(message),
+        sc.ContractParam.array(...signatures.map(signature => sc.ContractParam.byteArray(signature)))],
+    });
+    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
   }
 
   /**
@@ -57,16 +151,15 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    */
   public async getSchemaDetails(schemaName: string): Promise<ISchema> {
     const paramSchemaName = sc.ContractParam.string(schemaName);
-
-    const res: any = await rpc.Query.invokeFunction(
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res: any = await client.invokeFunction(
       this.scriptHash,
       IssuerOperation.GetSchemaDetails,
-      paramSchemaName,
-    ).execute(this.networkRpcUrl);
+      [paramSchemaName],
+    )
     const seraphResult = this.extractResult(res);
-
     if (!seraphResult.success) {
-      throw new SeraphIDError(seraphResult.error, res.result);
+      throw new SeraphIDError(seraphResult.error, res);
     }
 
     const schema: ISchema = JSON.parse(rpc.StringParser(seraphResult.result));
@@ -82,19 +175,20 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    */
   public async isValidClaim(claimId: string): Promise<boolean> {
     const paramClaimId = sc.ContractParam.string(claimId);
-    const res: any = await rpc.Query.invokeFunction(
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res: any = await client.invokeFunction(
       this.scriptHash,
       IssuerOperation.IsValidClaim,
-      paramClaimId,
-    ).execute(this.networkRpcUrl);
+      [paramClaimId],
+    );
 
     let result = false;
-    if (res.result.stack != null && res.result.stack.length === 1) {
-      result = res.result.stack[0].value;
+    if (res.stack != null && res.stack.length === 1) {
+      result = res.stack[0].value;
     } else {
       const seraphResult = this.extractResult(res);
       if (!seraphResult.success) {
-        throw new SeraphIDError(seraphResult.error, res.result);
+        throw new SeraphIDError(seraphResult.error, res);
       }
 
       result = rpc.IntegerParser(seraphResult.result) !== 0;
@@ -115,21 +209,15 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
     schema: ISchema,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<string> {
     const paramName = sc.ContractParam.string(schema.name);
     const paramDefinition = sc.ContractParam.string(JSON.stringify(schema));
-    const paramRevokable = sc.ContractParam.boolean(schema.revokable);
 
-    const sb = new sc.ScriptBuilder();
-    sb.emitAppCall(
-      this.scriptHash,
-      IssuerOperation.RegisterSchema,
-      [paramName, paramDefinition, paramRevokable],
-      false,
-    );
-
-    return this.sendSignedTransaction(sb.str, issuerPrivateKey, gas, intents);
+    return this.sendSignedTransaction(sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.RegisterSchema,
+      args: [paramName, paramDefinition]
+    }), issuerPrivateKey, gas);
   }
 
   /**
@@ -144,14 +232,14 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
     claimId: string,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<string> {
     const paramClaimId = sc.ContractParam.string(claimId);
 
-    const sb = new sc.ScriptBuilder();
-    sb.emitAppCall(this.scriptHash, IssuerOperation.InjectClaim, [paramClaimId], false);
-
-    return this.sendSignedTransaction(sb.str, issuerPrivateKey, gas, intents);
+    return this.sendSignedTransaction(sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.InjectClaim,
+      args: [paramClaimId]
+    }), issuerPrivateKey, gas);
   }
 
   /**
@@ -166,14 +254,14 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
     claimId: string,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<string> {
     const paramClaimId = sc.ContractParam.string(claimId);
 
-    const sb = new sc.ScriptBuilder();
-    sb.emitAppCall(this.scriptHash, IssuerOperation.RevokeClaim, [paramClaimId], false);
-
-    return this.sendSignedTransaction(sb.str, issuerPrivateKey, gas, intents);
+    return this.sendSignedTransaction(sc.createScript({
+      scriptHash: this.scriptHash,
+      operation: IssuerOperation.RevokeClaim,
+      args: [paramClaimId]
+    }), issuerPrivateKey, gas);
   }
 
   /**
@@ -184,18 +272,19 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
     const paramName = sc.ContractParam.string(schema.name);
     const paramDefinition = sc.ContractParam.string(JSON.stringify(schema));
     const paramRevokable = sc.ContractParam.boolean(schema.revokable);
-
-    const res: any = await rpc.Query.invokeFunction(
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res: any = await client.invokeFunction(
       this.scriptHash,
       IssuerOperation.RegisterSchema,
-      paramName,
+      [paramName,
       paramDefinition,
-      paramRevokable,
-    ).execute(this.networkRpcUrl);
+      paramRevokable]
+    )
+    
     const seraphResult = this.extractResult(res);
 
     if (!seraphResult.success) {
-      throw new SeraphIDError(seraphResult.error, res.result);
+      throw new SeraphIDError(seraphResult.error, res);
     }
   }
 
@@ -205,14 +294,12 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    */
   public async injectClaimTest(claimId: string): Promise<void> {
     const paramClaimId = sc.ContractParam.string(claimId);
-
-    const res: any = await rpc.Query.invokeFunction(this.scriptHash, IssuerOperation.InjectClaim, paramClaimId).execute(
-      this.networkRpcUrl,
-    );
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res: any = await client.invokeFunction(this.scriptHash, IssuerOperation.InjectClaim, [paramClaimId]);
     const seraphResult = this.extractResult(res);
 
     if (!seraphResult.success) {
-      throw new SeraphIDError(seraphResult.error, res.result);
+      throw new SeraphIDError(seraphResult.error, res);
     }
   }
 
@@ -222,14 +309,12 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    */
   public async revokeClaimTest(claimId: string): Promise<void> {
     const paramClaimId = sc.ContractParam.string(claimId);
-
-    const res: any = await rpc.Query.invokeFunction(this.scriptHash, IssuerOperation.RevokeClaim, paramClaimId).execute(
-      this.networkRpcUrl,
-    );
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res: any = await client.invokeFunction(this.scriptHash, IssuerOperation.RevokeClaim, [paramClaimId]);
     const seraphResult = this.extractResult(res);
 
     if (!seraphResult.success) {
-      throw new SeraphIDError(seraphResult.error, res.result);
+      throw new SeraphIDError(seraphResult.error, res);
     }
   }
 }

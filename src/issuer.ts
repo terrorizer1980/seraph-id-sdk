@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { tx, wallet } from '@cityofzion/neon-core';
+import { wallet } from '@cityofzion/neon-core';
 import { DIDNetwork, IClaim, ISchema, SeraphIDError } from './common';
 import { SeraphIDVerifier } from './verifier';
 
@@ -13,16 +13,15 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
    * Default constructor.
    * @param scriptHash Script hash of issuer's smart contract.
    * @param networkRpcUrl URL to NEO RPC.
-   * @param neoscanUrl URL to NEOSCAN API
    * @param network Network identifier used for DID
    */
   constructor(
     protected readonly scriptHash: string,
     protected readonly networkRpcUrl: string,
-    protected readonly neoscanUrl: string,
     protected readonly network: DIDNetwork,
+    protected readonly magic: number,
   ) {
-    super(scriptHash, networkRpcUrl, neoscanUrl, network);
+    super(scriptHash, networkRpcUrl, network, magic);
   }
 
   /**
@@ -76,7 +75,7 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
     const schema = await this.contract.getSchemaDetails(claim.schema);
     const claimAttributes = Object.keys(claim.attributes);
     const unknownAttributes = Object.keys(claim.attributes).filter(attr => !schema.attributes.includes(attr));
-
+    
     if (unknownAttributes != null && unknownAttributes.length > 0) {
       throw new SeraphIDError(
         `The following attributes are not part of schema ${claim.schema}: ${unknownAttributes.join(',')}`,
@@ -104,14 +103,12 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
     claim: IClaim,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<IClaim> {
     let result: IClaim = await this.validateClaimStructure(claim);
-
     result.issuerDID =  this.contract.getIssuerDID();
     result = await this.signClaim(claim, issuerPrivateKey);
-    result.tx = await this.contract.injectClaim(claim.id, issuerPrivateKey, gas, intents);
-
+    result.tx = await this.contract.injectClaim(claim.id, issuerPrivateKey, gas);
+    
     return result;
   }
 
@@ -127,7 +124,6 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
     claimId: string,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<string | void> {
     if (!claimId) {
       throw new SeraphIDError('Claim ID is missing');
@@ -135,7 +131,7 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
 
     const isValid = await this.contract.isValidClaim(claimId);
     if (isValid) {
-      return this.contract.revokeClaim(claimId, issuerPrivateKey, gas, intents);
+      return this.contract.revokeClaim(claimId, issuerPrivateKey, gas);
     }
   }
 
@@ -151,13 +147,12 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
     claim: IClaim,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<string | void> {
     if (!claim) {
       throw new SeraphIDError('Claim must be defined');
     }
 
-    return this.revokeClaimById(claim.id, issuerPrivateKey, gas, intents);
+    return this.revokeClaimById(claim.id, issuerPrivateKey, gas);
   }
 
   /**
@@ -176,7 +171,6 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
     revokable: boolean,
     issuerPrivateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<ISchema> {
     if (!name) {
       throw new SeraphIDError('Schema name is mandatory');
@@ -192,7 +186,7 @@ export class SeraphIDIssuer extends SeraphIDVerifier {
       revokable,
     };
 
-    schema.tx = await this.contract.registerSchema(schema, issuerPrivateKey, gas, intents);
+    schema.tx = await this.contract.registerSchema(schema, issuerPrivateKey, gas);
 
     return schema;
   }

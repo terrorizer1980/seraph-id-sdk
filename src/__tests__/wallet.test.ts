@@ -16,10 +16,10 @@ interface ITestData {
 function getTestData(): ITestData {
   const testObj: ITestData = {
     account: new SeraphIDAccount(testData.walletOwnerPrivateKey, DIDNetwork.PrivateNet),
-    issuer: new SeraphIDIssuer(testData.scriptHash, testData.neoRpcUrl, testData.neoscanUrl, DIDNetwork.PrivateNet),
+    issuer: new SeraphIDIssuer(testData.issuerScriptHash, testData.neoRpcUrl, DIDNetwork.PrivateNet, testData.magic),
     wallet: new SeraphIDWallet({ name: testData.walletName }),
   };
-  testObj.wallet.addAccount(testObj.account);
+  testObj.wallet.addAccount2(testObj.account);
 
   return testObj;
 }
@@ -28,7 +28,7 @@ afterAll(async done => {
   done();
 });
 
-test('Wallet.addClaim', async () => {
+test.only('Wallet.addClaim', async () => {
   const testObj = getTestData();
   // create and store claim
   const claim = testObj.issuer.createClaim(
@@ -47,7 +47,7 @@ test('Wallet.addClaim', async () => {
   expect(retrievedClaim).toEqual(claim);
 });
 
-test('Wallet.addClaim.encrypted', async () => {
+test.only('Wallet.addClaim.encrypted', async () => {
   const testObj = getTestData();
   const claim = testObj.issuer.createClaim(
     'testid',
@@ -64,12 +64,8 @@ test('Wallet.addClaim.encrypted', async () => {
   expect(testObj.account.addClaim(claim)).toBeUndefined();
 }, 10000);
 
-test('Wallet.export.import', async () => {
+test.only('Wallet.export.import', async () => {
   const testObj = getTestData();
-  // create keys and wallet
-  const testAccount = new SeraphIDAccount(testData.walletOwnerPrivateKey, DIDNetwork.PrivateNet);
-  const testWallet = new SeraphIDWallet({ name: testData.walletName });
-  testWallet.addAccount(testAccount);
 
   // generate claim from issuer and add to wallet
   const claimId = 'TestClaimID123';
@@ -82,47 +78,47 @@ test('Wallet.export.import', async () => {
     validFrom,
     new Date(),
   );
-  testWallet.addClaim(claim);
+  testObj.wallet.addClaim(claim);
 
-  await testAccount.encrypt(testData.walletPassword);
+  await testObj.account.encrypt(testData.walletPassword);
 
   // export wallet to JSON
-  const exportedWalletJSON = JSON.stringify(testWallet.export());
+  const exportedWalletJSON = JSON.stringify(testObj.wallet.export());
 
   // Create new wallet with exported JSON
   const importedWallet = new SeraphIDWallet(JSON.parse(exportedWalletJSON));
 
   // decrypt account and access getters of fields that will be compared
-  await importedWallet.accounts[0].decrypt(testData.walletPassword);
-  await testAccount.decrypt(testData.walletPassword);
-  let _ = importedWallet.accounts[0].privateKey;
-  _ = importedWallet.accounts[0].publicKey;
-  _ = importedWallet.accounts[0].scriptHash;
+  await importedWallet.accounts2[0].decrypt(testData.walletPassword);
+  await testObj.account.decrypt(testData.walletPassword);
+  let _ = importedWallet.accounts2[0].privateKey;
+  _ = importedWallet.accounts2[0].publicKey;
+  _ = importedWallet.accounts2[0].scriptHash;
 
-  expect(importedWallet).toEqual(testWallet);
+  expect(importedWallet).toEqual(testObj.wallet);
   const importedClaim = importedWallet.getClaim(claimId);
 
-  expect(importedWallet.accounts[0].getDID()).toEqual(testAccount.getDID());
+  expect(importedWallet.accounts2[0].getDID()).toEqual(testObj.account.getDID());
   expect(importedClaim).toBeDefined();
   if (importedClaim) {
     expect(importedClaim.validFrom).toEqual(validFrom);
   }
 }, 20000);
 
-test('Wallet.createDID', async () => {
+test.only('Wallet.createDID', async () => {
   // create keys and wallet
   const testAccount = new SeraphIDAccount(testData.walletOwnerPrivateKey, DIDNetwork.PrivateNet);
   const testWallet = new SeraphIDWallet({ name: testData.walletName });
-  testWallet.addAccount(testAccount);
+  testWallet.addAccount2(testAccount);
   expect(testWallet.getDID(0)).toEqual(testData.ownerDID);
 
   // create new random DID from wallet
   const did = testWallet.createDID(DIDNetwork.PrivateNet);
 
-  expect(testWallet.accounts.length).toEqual(2);
+  expect(testWallet.accounts2.length).toEqual(2);
 });
 
-test('Account.encrypt.decrypt', async () => {
+test.only('Account.encrypt.decrypt', async () => {
   const testObj = getTestData();
   // generate claim from issuer and add to wallet
   const claim = testObj.issuer.createClaim(

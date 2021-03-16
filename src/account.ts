@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { wallet } from '@cityofzion/neon-core/';
+import { wallet } from '@cityofzion/neon-core';
 import { enc } from 'crypto-js';
 import AES from 'crypto-js/aes';
 import { IClaim, SeraphIDError } from './common';
@@ -11,6 +11,7 @@ import { IClaim, SeraphIDError } from './common';
  * Accounts with their claims inside in this form are encrypted.
  */
 export interface ISeraphIDAccountJSON extends wallet.AccountJSON {
+  extra: { [key: string]: any };
   claims: string | undefined;
 }
 
@@ -29,6 +30,8 @@ export class SeraphIDAccount extends wallet.Account {
 
   // Indicates if the account is locked (true) or decrypted (false).
   private isLocked: boolean;
+
+  public extra: { [key: string]: any } = {};
 
   /**
    * Default constructor.
@@ -109,7 +112,7 @@ export class SeraphIDAccount extends wallet.Account {
 
     const acc = super.export() as ISeraphIDAccountJSON;
     acc.claims = this.encryptedClaims;
-
+    acc.extra = this.extra;
     return acc;
   }
 

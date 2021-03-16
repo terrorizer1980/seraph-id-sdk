@@ -1,25 +1,36 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { tx } from '@cityofzion/neon-core';
-import { api, rpc, wallet } from '@cityofzion/neon-js';
+import { rpc as query, tx, u} from '@cityofzion/neon-core';
+import { StackItem, StackItemJson} from '@cityofzion/neon-core/sc';
+import { Witness } from '@cityofzion/neon-core/tx';
+import { rpc, wallet} from '@cityofzion/neon-js';
+import { calculateNetworkFee, getFeeInformation } from "@cityofzion/neon-api/api";
 import { DIDNetwork, IResult, SeraphIDError } from './common';
 
 /**
  * Base class for Seraph ID smart contracts.
  */
 export class SeraphIDContractBase {
+
   /**
    * Default constructor.
    * @param networkRpcUrl URL to NEO RPC.
-   * @param neoscanUrl URL to NEOSCAN API
    * @param network Network identifier used for DID
    */
-  constructor(protected readonly networkRpcUrl: string, protected readonly neoscanUrl: string, protected readonly network: DIDNetwork) {}
+  protected readonly networkRpcUrl: string;
+  protected readonly network: DIDNetwork;
+  protected readonly magic: number;
+
+  constructor(networkRpcUrl: string, network: DIDNetwork, magic: number) {
+    this.networkRpcUrl = networkRpcUrl;
+    this.network = network;
+    this.magic = magic;
+  }
 
   /**
    * Sents signed transaction to the blockchain.
-   * @param gas t Script for invocation.
+   * @param script Script for invocation.
    * @param privateKey Private key of the transaction signer.
    * @param gas Additional gas to be sent with invocation transaction.
    * @param intents Intents to be included in invocation transaction.
@@ -29,38 +40,46 @@ export class SeraphIDContractBase {
     script: string,
     privateKey: string,
     gas?: number,
-    intents?: tx.TransactionOutput[],
   ): Promise<string> {
     const account = new wallet.Account(privateKey);
-    const apiProvider = new api.neoscan.instance(this.neoscanUrl);
-
-    const balance = await apiProvider.getBalance(account.address);
-    const txConfig = {
-      account,
-      api: new api.neoscan.instance(this.networkRpcUrl),
-      balance,
-      gas,
-      intents,
-      script,
-    };
-
-    const invokeConfig = await api
-      .fillSigningFunction(txConfig)
-      .then(api.createInvocationTx)
-      .then(api.modifyTransactionForEmptyTransaction)
-      .then(api.signTx);
-
-    if (invokeConfig.tx) {
-      const serializedTx = invokeConfig.tx.serialize();
-      const res = await rpc.Query.sendRawTransaction(serializedTx).execute(this.networkRpcUrl);
-      if (!res.result) {
-        throw new SeraphIDError('Transaction failed: ' + invokeConfig.tx.hash, res);
-      }
-    } else {
-      throw new SeraphIDError('Transaction signing failed!');
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const currentHeight = await client.getBlockCount();
+    
+    const transaction = new tx.Transaction({
+      version: 0,
+      nonce: Math.floor(Math.random()*4294967295),
+      validUntilBlock: currentHeight + tx.Transaction.MAX_TRANSACTION_LIFESPAN - 1,
+      signers: [new tx.Signer({account: account.scriptHash, scopes: tx.WitnessScope.CalledByEntry})],
+      attributes: [],
+      script: script
+    });
+    
+    const invokeResult = await client.invokeScript(u.HexString.fromHex(script), transaction.signers);
+    if (invokeResult.state != "HALT") {
+      throw new SeraphIDError('invoke script failed', invokeResult.exception);
     }
+    
+    transaction.systemFee = u.BigInteger.fromNumber(invokeResult.gasconsumed);
 
-    return invokeConfig.tx.hash;
+    transaction.witnesses[0] = new Witness({ invocationScript: "", verificationScript: u.HexString.fromBase64(account.contract.script)});
+    const { feePerByte, executionFeeFactor } = await getFeeInformation(
+      client
+    );
+    transaction.networkFee =  calculateNetworkFee(
+      transaction,
+      feePerByte,
+      executionFeeFactor
+    );
+
+    transaction.witnesses = [];
+    transaction.sign(account, this.magic);
+
+    const res = await client.sendRawTransaction(transaction);
+    if (!res) {
+      throw new SeraphIDError('Transaction failed: ' + transaction.hash, res);
+    }
+    console.log(transaction.hash(this.magic));
+    return transaction.hash(this.magic);
   }
 
   /**
@@ -70,14 +89,39 @@ export class SeraphIDContractBase {
    * @returns Operation's result as a string.
    */
   protected async getStringFromOperation(scriptHash: string, operation: string): Promise<string> {
-    const res = await rpc.Query.invokeFunction(scriptHash, operation).execute(this.networkRpcUrl);
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res = await client.invokeFunction(scriptHash, operation);
     let result: string;
 
     const seraphResult = this.extractResult(res);
     if (seraphResult.success) {
       result = rpc.StringParser(seraphResult.result);
     } else {
-      throw new SeraphIDError(seraphResult.error, res.result);
+      throw new SeraphIDError(seraphResult.error, res);
+    }
+    return result;
+  }
+
+    /**
+   * Invokes a smart contract operation that returns a string array.
+   * @param scriptHash Hash of the smart contract's script.
+   * @param operation Operation name of Seraph ID Issuer's contract.
+   * @returns Operation's result as a string.
+   */
+  protected async getStringArrayFromOperation(scriptHash: string, operation: string): Promise<string[]> {
+    const client = new rpc.RPCClient(this.networkRpcUrl);
+    const res = await client.invokeFunction(scriptHash, operation);
+    let result: string[];
+    const seraphResult = this.extractResult(res);
+    const length = seraphResult.result.value.length;
+    if (seraphResult.success) {
+      result = [];
+      for (var i = 0 ; i < length; i++)
+      {
+        result.push(seraphResult.result.value[i].value);
+      }
+    } else {
+      throw new SeraphIDError(seraphResult.error, res);
     }
 
     return result;
@@ -88,26 +132,26 @@ export class SeraphIDContractBase {
    * @param res Smart contract's invocation result.
    * @returns Seraph result.
    */
-  protected extractResult(res: any): IResult {
+  protected extractResult(res: query.InvokeResult): IResult {
     let result: any | undefined;
     let success = false;
-    let error: string | undefined = 'Smart Contract failed!';
-
-    if (res.result.stack != null && res.result.stack.length === 1) {
-      const returnObject = res.result.stack[0];
+    let error: string | undefined = "no error";
+    if (res.stack != null && res.stack instanceof Array) {
+      const returnObject = res.stack[0];
+      result = returnObject;
+      success = true;
       if (returnObject.type === 'Array') {
-        const arr = returnObject.value;
-        if (arr != null && arr.length === 2) {
-          success = rpc.IntegerParser(arr[0]) === 1;
-          error = success ? undefined : rpc.StringParser(arr[1]);
-          result = success ? arr[1] : undefined;
+        const arr = returnObject.value as Array<StackItemJson>;
+        for (var i = 0; i < arr.length; i++){
+          arr[i].value = arr[i].type === "ByteString" ? u.HexString.fromBase64(arr[i].value as string).toString() : arr[i].value;
         }
-      } else {
-        success = true;
-        result = returnObject;
-      }
+        result.value = arr;
+      } else if (returnObject.type === "ByteString"){
+        result.value = u.HexString.fromBase64(returnObject.value as string).toString();
+      } 
+    } else {
+      error = res.exception === null ? undefined : res.exception;
     }
-
     const outcome: IResult = {
       error,
       result,

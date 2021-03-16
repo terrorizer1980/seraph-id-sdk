@@ -39,23 +39,26 @@ export interface IResult {
  * Operation names in Issuer's smart contract.
  */
 export enum IssuerOperation {
-  GetSchemaDetails = 'GetSchemaDetails',
-  RegisterSchema = 'RegisterSchema',
-  InjectClaim = 'InjectClaim',
-  RevokeClaim = 'RevokeClaim',
-  IsValidClaim = 'IsValidClaim',
-  PublicKey = 'PublicKey',
-  Name = 'Name',
+  GetSchemaDetails = 'getSchemaDetails',
+  RegisterSchema = 'registerSchema',
+  InjectClaim = 'injectClaim',
+  RevokeClaim = 'revokeClaim',
+  IsValidClaim = 'isValidClaim',
+  GetPublicKeys = 'getPublicKeys',
+  Name = 'name',
+  SetRecovery = 'setRecovery',
+  AddKeyByRecovery = 'addKeyByRecovery',
+  RemoveKeyByRecovery = 'removeKeyByRecovery',
 }
 
 /**
  * Operation names in Root's of Trust smart contract.
  */
 export enum RootOfTrustOperation {
-  Name = 'Name',
-  IsTrusted = 'IsTrusted',
-  RegisterIssuer = 'RegisterIssuer',
-  DeactivateIssuer = 'DeactivateIssuer',
+  Name = 'name',
+  IsTrusted = 'isTrusted',
+  RegisterIssuer = 'registerIssuer',
+  DeactivateIssuer = 'deactivateIssuer',
 }
 
 /** Common NEO DID networks. */
