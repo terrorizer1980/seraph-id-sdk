@@ -47,9 +47,9 @@
     "lib/**/*"
   ],
   "dependencies": {
-    "@cityofzion/neon-api": "^5.0.0-next.6",
-    "@cityofzion/neon-core": "^5.0.0-next.6",
-    "@cityofzion/neon-js": "^5.0.0-next.6"
+    "@cityofzion/neon-api": "file:./neon-js-5.0.0-next.6/packages/neon-api/lib",
+    "@cityofzion/neon-core": "file:./neon-js-5.0.0-next.6/packages/neon-core/lib",
+    "@cityofzion/neon-js": "file:./neon-js-5.0.0-next.6/packages/neon-js/lib"
   },
   "resolutions": {
     "crypto-js": "4.0.0",
