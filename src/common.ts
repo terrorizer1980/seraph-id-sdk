@@ -39,16 +39,15 @@ export interface IResult {
  * Operation names in Issuer's smart contract.
  */
 export enum IssuerOperation {
+  Name = 'name',
   GetSchemaDetails = 'getSchemaDetails',
   RegisterSchema = 'registerSchema',
   InjectClaim = 'injectClaim',
   RevokeClaim = 'revokeClaim',
   IsValidClaim = 'isValidClaim',
-  GetPublicKeys = 'getPublicKeys',
-  Name = 'name',
-  SetRecovery = 'setRecovery',
-  AddKeyByRecovery = 'addKeyByRecovery',
-  RemoveKeyByRecovery = 'removeKeyByRecovery',
+  GetAdminsList = 'getAdminList',
+  AddAdmin = 'addAdmin',
+  RemoveAdmin = 'removeAdmin',
 }
 
 /**

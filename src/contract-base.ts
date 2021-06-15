@@ -1,12 +1,14 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { rpc as query, tx, u} from '@cityofzion/neon-core';
-import { StackItem, StackItemJson} from '@cityofzion/neon-core/sc';
-import { Witness } from '@cityofzion/neon-core/tx';
-import { rpc, wallet} from '@cityofzion/neon-js';
-import { calculateNetworkFee, getFeeInformation } from "@cityofzion/neon-api/api";
-import { DIDNetwork, IResult, SeraphIDError } from './common';
+import { rpc, tx, u, wallet, sc} from '@cityofzion/neon-core';
+import neoCore from '@cityofzion/neon-core';
+import bundle from '@cityofzion/neon-api';
+import { DIDNetwork, IResult, SeraphIDError } from './common';
+// import util from 'util';
+const api = bundle(neoCore);
+
+// global.TextEncoder = util.TextEncoder;
 
 /**
  * Base class for Seraph ID smart contracts.
@@ -43,16 +45,16 @@ export class SeraphIDContractBase {
   ): Promise<string> {
     const account = new wallet.Account(privateKey);
     const client = new rpc.RPCClient(this.networkRpcUrl);
-    const currentHeight = await client.getBlockCount();
+    const currentHeight = await client.getBlockCount();
     
-    const transaction = new tx.Transaction({
+    const transaction = new tx.Transaction({
       version: 0,
       nonce: Math.floor(Math.random()*4294967295),
-      validUntilBlock: currentHeight + tx.Transaction.MAX_TRANSACTION_LIFESPAN - 1,
+      validUntilBlock: currentHeight + tx.Transaction.MAX_TRANSACTION_LIFESPAN - 1,
       signers: [new tx.Signer({account: account.scriptHash, scopes: tx.WitnessScope.CalledByEntry})],
       attributes: [],
-      script: script
-    });
+      script: u.HexString.fromHex(script, false)
+    });
     
     const invokeResult = await client.invokeScript(u.HexString.fromHex(script), transaction.signers);
     if (invokeResult.state != "HALT") {
@@ -61,11 +63,10 @@ export class SeraphIDContractBase {
     
     transaction.systemFee = u.BigInteger.fromNumber(invokeResult.gasconsumed);
 
-    transaction.witnesses[0] = new Witness({ invocationScript: "", verificationScript: u.HexString.fromBase64(account.contract.script)});
-    const { feePerByte, executionFeeFactor } = await getFeeInformation(
-      client
-    );
-    transaction.networkFee =  calculateNetworkFee(
+    transaction.witnesses[0] = new tx.Witness({ invocationScript: "", verificationScript: u.HexString.fromBase64(account.contract.script)});
+    const { feePerByte, executionFeeFactor } = await api.api.getFeeInformation(client);
+
+    transaction.networkFee =  api.api.calculateNetworkFee(
       transaction,
       feePerByte,
       executionFeeFactor
@@ -74,12 +75,12 @@ export class SeraphIDContractBase {
     transaction.witnesses = [];
     transaction.sign(account, this.magic);
 
-    const res = await client.sendRawTransaction(transaction);
+    const res = await client.sendRawTransaction(transaction);
     if (!res) {
       throw new SeraphIDError('Transaction failed: ' + transaction.hash, res);
     }
-    console.log(transaction.hash(this.magic));
-    return transaction.hash(this.magic);
+    console.log(transaction.hash());
+    return transaction.hash();
   }
 
   /**
@@ -132,7 +133,7 @@ export class SeraphIDContractBase {
    * @param res Smart contract's invocation result.
    * @returns Seraph result.
    */
-  protected extractResult(res: query.InvokeResult): IResult {
+  protected extractResult(res: rpc.InvokeResult): IResult {
     let result: any | undefined;
     let success = false;
     let error: string | undefined = "no error";
@@ -141,7 +142,7 @@ export class SeraphIDContractBase {
       result = returnObject;
       success = true;
       if (returnObject.type === 'Array') {
-        const arr = returnObject.value as Array<StackItemJson>;
+        const arr = returnObject.value as Array<sc.StackItemJson>;
         for (var i = 0; i < arr.length; i++){
           arr[i].value = arr[i].type === "ByteString" ? u.HexString.fromBase64(arr[i].value as string).toString() : arr[i].value;
         }

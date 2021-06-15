@@ -1,6 +1,8 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
-import { rpc, sc } from '@cityofzion/neon-js';
+
+import { rpc, sc} from '@cityofzion/neon-js';
+
 import { DIDNetwork, ISchema, IssuerOperation, SeraphIDError } from './common';
 import { SeraphIDContractBase } from './contract-base';
 
@@ -43,105 +45,36 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    * Returns public key of the issuer required to validate claim's signature.
    * @returns Issuer's public key.
    */
-  public async getIssuerPublicKeys(): Promise<string[]> {
-    return this.getStringArrayFromOperation(this.scriptHash, IssuerOperation.GetPublicKeys);
+  public async getAdminList(): Promise<string[]> {
+    return this.getStringArrayFromOperation(this.scriptHash, IssuerOperation.GetAdminsList);
   }
 
-  /**
-   * Initiate recovery list with signed message by certain public key
-   * @param threshold minimum recoveries needed to perform an action
-   * @param members recovery list
-   * @param pubKeyIndex the index of public key used to sign message
-   * @param message original message
-   * @param signature signed message
-   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
-   * @param gas Additional gas to be sent with invocation transaction.
-   * @returns Transaction hash.
+    /**
+   * Adds public key of the issuer required to validate claim's signature.
+   * @returns Issuer's public key.
    */
-  public async InitRecovery(threshold: number, members:string[], pubKeyIndex: number, message: string, signature: string, issuerPrivateKey: string, gas?: number): Promise<string> {
-    const script = sc.createScript({
-      scriptHash: this.scriptHash,
-      operation: IssuerOperation.SetRecovery,
-      args:
-        [sc.ContractParam.integer(threshold),
-        sc.ContractParam.array(...members.map(member => sc.ContractParam.byteArray(member))), 
-        sc.ContractParam.integer(pubKeyIndex),
-        sc.ContractParam.byteArray(message),
-        sc.ContractParam.byteArray(signature)]
-    });
-    console.log(this.scriptHash);
-    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
-  }
-  
-  /**
-   * Initiate recovery list with signed message by certain public key
-   * @param threshold minimum recoveries needed to perform an action
-   * @param members recovery list
-   * @param recoveryIndexes the index of public key used to sign message
-   * @param message original message
-   * @param signatures signed messages
-   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
-   * @param gas Additional gas to be sent with invocation transaction.
-   * @returns Transaction hash.
-   */
-  public async ResetRecovery(threshold: number, members:string[], recoveryIndexes: number[], message: string, signatures: string[], issuerPrivateKey: string, gas?: number): Promise<string> {
-    const script = sc.createScript({
-      scriptHash: this.scriptHash,
-      operation: IssuerOperation.SetRecovery,
-      args: 
-        [sc.ContractParam.integer(threshold),
-        sc.ContractParam.array(...members.map(member => sc.ContractParam.byteArray(member))), 
-        sc.ContractParam.array(...recoveryIndexes.map(recoveryIndex => sc.ContractParam.integer(recoveryIndex))), 
-        sc.ContractParam.byteArray(message),
-        sc.ContractParam.array(...signatures.map(signature => sc.ContractParam.byteArray(signature)))],
-    });
-    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
-  }
+     public async addAdmin(admin: string, issuerPrivateKey: string, gas?: number): Promise<string> {
+      const adminPubKey = sc.ContractParam.publicKey(admin);
+      
+      return this.sendSignedTransaction(sc.createScript({
+        scriptHash: this.scriptHash,
+        operation: IssuerOperation.AddAdmin,
+        args: [adminPubKey]
+      }), issuerPrivateKey, gas);
+    }
 
   /**
-   * Initiate recovery list with signed message by certain public key
-   * @param addedPubKey newly added public key
-   * @param recoveryIndexes the index of public key used to sign message
-   * @param message original message
-   * @param signatures signed messages
-   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
-   * @param gas Additional gas to be sent with invocation transaction.
-   * @returns Transaction hash.
+   * Adds public key of the issuer required to validate claim's signature.
+   * @returns Issuer's public key.
    */
-  public async AddKeyByRecovery(addedPubKey: string, recoveryIndexes: number[], message: string, signatures: string[], issuerPrivateKey: string, gas?: number): Promise<string> {
-    const script =  sc.createScript({
-      scriptHash: this.scriptHash,
-      operation: IssuerOperation.AddKeyByRecovery,
-      args: 
-        [sc.ContractParam.byteArray(addedPubKey),
-        sc.ContractParam.array(...recoveryIndexes.map(recoveryIndex => sc.ContractParam.integer(recoveryIndex))), 
-        sc.ContractParam.byteArray(message),
-        sc.ContractParam.array(...signatures.map(signature => sc.ContractParam.byteArray(signature)))],
-    });
-    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
-  }
+  public async removeAdmin(admin: string, issuerPrivateKey: string, gas?: number): Promise<string> {
+  const adminPubKey = sc.ContractParam.publicKey(admin);
 
-  /**
-   * Initiate recovery list with signed message by certain public key
-   * @param removedPubKey removed public key
-   * @param recoveryIndexes the index of public key used to sign message
-   * @param message original message
-   * @param signatures signed messages
-   * @param issuerPrivateKey Private key of the issuer to sign the transaction.
-   * @param gas Additional gas to be sent with invocation transaction.
-   * @returns Transaction hash.
-   */
-  public async RemoveKeyByRecovery(removedPubKey: string, recoveryIndexes: number[], message: string, signatures: string[], issuerPrivateKey: string, gas?: number): Promise<string> {
-    const sb = new sc.ScriptBuilder();
-    const script = sc.createScript({
-      scriptHash: this.scriptHash,
-      operation: IssuerOperation.RemoveKeyByRecovery,
-      args: [sc.ContractParam.byteArray(removedPubKey),
-        sc.ContractParam.array(...recoveryIndexes.map(recoveryIndex => sc.ContractParam.integer(recoveryIndex))), 
-        sc.ContractParam.byteArray(message),
-        sc.ContractParam.array(...signatures.map(signature => sc.ContractParam.byteArray(signature)))],
-    });
-    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
+  return this.sendSignedTransaction(sc.createScript({
+    scriptHash: this.scriptHash,
+    operation: IssuerOperation.RemoveAdmin,
+    args: [adminPubKey]
+  }), issuerPrivateKey, gas);
   }
 
   /**
@@ -205,19 +138,16 @@ export class SeraphIDIssuerContract extends SeraphIDContractBase {
    * @param intents Intents to be included in invocation transaction.
    * @returns Transaction hash.
    */
-  public async registerSchema(
-    schema: ISchema,
-    issuerPrivateKey: string,
-    gas?: number,
-  ): Promise<string> {
+  public async registerSchema(schema: ISchema,issuerPrivateKey: string,gas?: number): Promise<string> {
     const paramName = sc.ContractParam.string(schema.name);
     const paramDefinition = sc.ContractParam.string(JSON.stringify(schema));
-
-    return this.sendSignedTransaction(sc.createScript({
+    
+    const script = sc.createScript({
       scriptHash: this.scriptHash,
       operation: IssuerOperation.RegisterSchema,
       args: [paramName, paramDefinition]
-    }), issuerPrivateKey, gas);
+    })
+    return this.sendSignedTransaction(script, issuerPrivateKey, gas);
   }
 
   /**

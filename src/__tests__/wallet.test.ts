@@ -24,10 +24,6 @@ function getTestData(): ITestData {
   return testObj;
 }
 
-afterAll(async done => {
-  done();
-});
-
 test.only('Wallet.addClaim', async () => {
   const testObj = getTestData();
   // create and store claim

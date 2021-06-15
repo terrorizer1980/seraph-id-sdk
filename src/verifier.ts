@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { u, wallet } from '@cityofzion/neon-core';
+import { u, wallet } from '@cityofzion/neon-js';
 import { DIDNetwork, IClaim, ISchema, SeraphIDError } from './common';
 import { SeraphIDIssuerContract } from './issuer-contract';
 import { SeraphIDRootOfTrust } from './rot';
@@ -43,7 +43,7 @@ export class SeraphIDVerifier {
     }
 
     // Verify offline with valid Issuer's public key.
-    const issuerPublicKeys = await this.contract.getIssuerPublicKeys();
+    const issuerPublicKeys = await this.contract.getAdminList();
     for (var i = 0; i < issuerPublicKeys.length; i++)
     {
       if (this.verifyOffline(claim, issuerPublicKeys[i]))

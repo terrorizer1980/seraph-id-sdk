@@ -4,15 +4,14 @@
 import { DIDNetwork, ISchema } from '../common';
 import { SeraphIDIssuerContract } from '../issuer-contract';
 import testData from './test-data.json';
+// import util from 'util';
+
+// global.TextEncoder = util.TextEncoder;
 
 const contract = new SeraphIDIssuerContract(testData.issuerScriptHash, testData.neoRpcUrl, DIDNetwork.PrivateNet, testData.magic);
 
 // Increase test suite timeout as we need to wait for block confirmation.
 jest.setTimeout(240000);
-
-afterAll(async done => {
-  done();
-});
 
 test('SeraphIDContract.getIssuerName', () => {
   expect(contract.getIssuerName()).resolves.toBe(testData.issuerName);
@@ -23,7 +22,7 @@ test('SeraphIDContract.getIssuerDID', () => {
 });
 
 test('SeraphIDContract.getIssuerPublicKeys', () => {
-  expect(contract.getIssuerPublicKeys()).resolves.toEqual(testData.issuerPublicKeys);
+  expect(contract.getAdminList()).resolves.toEqual(testData.issuerPublicKeys);
 });
 
 test('SeraphIDContract.getSchemaDetails.nonexistentSchema', () => {

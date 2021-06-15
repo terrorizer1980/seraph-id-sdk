@@ -3,11 +3,11 @@
   "magic":5195086,
   "neoscanUrl": "http://localhost:4000/api/main_net",
   "network": "PrivateNet",
-  "issuerScriptHash": "0x518a5ae4733d547c8b2087f96b84360c79f09ff6",
-  "issuerName": "Seraph Issuer Template",
-  "issuerDID": "did:neoid:priv:0x518a5ae4733d547c8b2087f96b84360c79f09ff6",
-  "issuerPublicKeys": ["02e3729c717dd45a40400f91419e2663b404831f94c7cc4d68ecba642cd8dfd176"],
-  "issuerPrivateKey": "Kxbk35hWow5V19kdZYzZg43CJnPF2bgiNZH566KoUmd6txhyaozu",
+  "issuerScriptHash": "0x29f2b0b38bd5f406e57408efd8911d28ac219212",
+  "issuerName": "SeraphID Issuer",
+  "issuerDID": "did:neoid:priv:0x29f2b0b38bd5f406e57408efd8911d28ac219212",
+  "issuerPublicKeys": ["0205651e30690e8bc3b9a1ea86ea07dc83584200d80700de28ddd447000721eb95"],
+  "issuerPrivateKey": "KxhEtLez1iqviseqxRVmnfJC9HK8GU4Jss1XrrMAzcpHpv8NvFqJ",
   "existingSchema": {
     "name": "TestSchema",
     "attributes": [
@@ -22,18 +22,14 @@
     "lastName": "Bao",
     "age": 30
   },
-  "rotName": "Seraph Trust Anchor Template",
-  "rotDID": "did:neoid:priv:0x0d2c6f2b036ab1da64030a0554fb2a6aa24be730",
-  "rotPrivateKey": "Kzfm7iFUkWF5nBVxVzVSV6hk6qLRhP4vrCmjEkLB8FrgpAFziDiy",
-  "rotScriptHash": "0x0d2c6f2b036ab1da64030a0554fb2a6aa24be730",
+  "rotName": "SeraphID Trust Anchor",
+  "rotDID": "did:neoid:priv:0x0c1728dd6e0e662570819e68c1db4ef88ce4cbd9",
+  "rotPrivateKey": "L56bTctBUZyWjzDkywu8Ndr7GXJ5BneeGK7dZ8xFUZw9aRUM3oST",
+  "rotScriptHash": "0x0c1728dd6e0e662570819e68c1db4ef88ce4cbd9",
   "walletName": "TestWallet",
   "walletPassword": "1111",
-  "walletOwnerPrivateKey": "L4kETdqUKaMqh4UrNjE4egm79a3gGB5HCgx1vnDWb25PXbnDxakr",
-  "ownerDID": "did:neoid:priv:NgvroMbw1pNZGY9zXNtSyrddVaZLza6CVM",
+  "walletOwnerPrivateKey": "L3gepiWZPJts7ZjcMwXVWpuPrJLsR21azWpfCgBihE8Lu9f3t2LZ",
+  "ownerDID": "did:neoid:priv:NMafCoRYgshGKsjE4KCYv5BcHCytsvaLgZ",
   "timeToWaitForBlockConfirmation": 15000,
-  "recoveryKey": "03a81eaf7368b7a0b6b83580d19d6b586172018d32c4c68446e205c16873ef92d5",
-  "initialMessage": "1234",
-  "initialSignature": "30a0fef7253b965991b87208e6dfc4ec72360bb2f02db7a39706cd57b4f821dc6d16b41126a1c72cc148b0553a1470c183ab2ab95d4f459386e15e9e07a6c471",
-  "resetSignature": "7f6cfe2c7bc265cb07764ef749f1db99106737e0e72c4ca3c4ed40326ee160874a81cddd5aa9549bf76b502a1887a20d29a4fdd8186b690396ed2f29cc873a4a",
-  "addedPubkey": "03586199560da6704d33891bfda4eef72486e322e082df47ae29a8149ced1e68a8"
+  "addedAdminKey": "022d08ee818d8efa5193b5874909536a77fa2772cf1bfe5c2746523c3abc61f33c"
 }

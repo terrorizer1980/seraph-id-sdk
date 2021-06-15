@@ -3,17 +3,12 @@
 
 import { DIDNetwork } from '../common';
 import { SeraphIDRootOfTrust } from '../rot';
-import {u} from '@cityofzion/neon-core';
 import testData from './test-data.json';
 
 const contract = new SeraphIDRootOfTrust(testData.rotScriptHash, testData.neoRpcUrl, DIDNetwork.PrivateNet, testData.magic);
 
 // Increase test suite timeout as we need to wait for block confirmation.
 jest.setTimeout(240000);
-
-afterAll(async done => {
-  done();
-});
 
 test.only('SeraphIDRootOfTrust.getName', () => {
   expect(contract.getName()).resolves.toBe(testData.rotName);

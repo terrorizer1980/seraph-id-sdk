@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { rpc, sc } from '@cityofzion/neon-js';
+import {rpc, sc} from '@cityofzion/neon-js';
 import { DIDNetwork, RootOfTrustOperation, SeraphIDError } from './common';
 import { SeraphIDContractBase } from './contract-base';
 

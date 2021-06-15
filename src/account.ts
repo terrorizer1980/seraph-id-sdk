@@ -6,10 +6,12 @@ import { enc } from 'crypto-js';
 import AES from 'crypto-js/aes';
 import { IClaim, SeraphIDError } from './common';
 
+
 /**
  * Seraph ID account as JSON.
  * Accounts with their claims inside in this form are encrypted.
  */
+
 export interface ISeraphIDAccountJSON extends wallet.AccountJSON {
   extra: { [key: string]: any };
   claims: string | undefined;

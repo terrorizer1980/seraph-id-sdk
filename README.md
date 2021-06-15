@@ -24,6 +24,25 @@ Visit the [Seraph ID](https://www.seraphid.io/) official web page to learn more 
 
 # Getting started
 
+## Step for Setup:
+
+1. Go to /seraph-id-sdk/neon-js-5.0.0-next.X
+
+```
+yarn
+yarn bootstrap
+yarn build
+yarn dist
+```
+
+2. Go to /seraph-id-sdk
+
+```
+yarn add -P loglevel bignumber.js axios
+yarn
+yarn build
+```
+
 ## Installation
 
 ### Node.js

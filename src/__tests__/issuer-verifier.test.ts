@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Swisscom Blockchain AG
 // Licensed under MIT License
 
-import { wallet } from '@cityofzion/neon-js';
+import {wallet} from '@cityofzion/neon-core';
 import { DIDNetwork, ISchema } from '../common';
 import { SeraphIDIssuer } from '../issuer';
 import { SeraphIDIssuerContract } from '../issuer-contract';
@@ -52,56 +52,22 @@ test.only('SeraphIDIssuer.issueClaim.validate', async () => {
   expect(valid).toBeTruthy();
 });
 
-test.only('sign message', async () => {
-  const signature = wallet.sign(testData.initialMessage, testData.issuerPrivateKey);
-  expect(signature).toEqual(testData.initialSignature);
-})
+test('SeraphIDContract.addAdmin', async () => {
+  await new Promise(r => setTimeout(r, testData.timeToWaitForBlockConfirmation));
+  try{
+  const tx = await contract.addAdmin(testData.addedAdminKey, testData.issuerPrivateKey);
+  expect(tx).toBeDefined();
+  } catch (err)  {
+    console.log("sendSignedTransaction error: " + err);
+  }
+});
 
-test.only('SeraphIDIssuer.recovery', async () => {
-  try {
-    await contract.InitRecovery(1,
-      [testData.recoveryKey],
-      0,
-      testData.initialMessage,
-      testData.initialSignature,
-      testData.issuerPrivateKey);
-      await new Promise(r => setTimeout(r, testData.timeToWaitForBlockConfirmation));
-  } catch (err) {
-    console.log("send rawtx error: ", err);
+test('SeraphIDContract.removeAdmin', async () => {
+  await new Promise(r => setTimeout(r, testData.timeToWaitForBlockConfirmation));
+  try{
+  const tx = await contract.removeAdmin(testData.addedAdminKey, testData.issuerPrivateKey);
+  expect(tx).toBeDefined();
+  } catch (err)  {
+    console.log("sendSignedTransaction error: " + err);
   }
-  try {
-    await contract.ResetRecovery(1,
-      [testData.recoveryKey],
-      [0],
-      testData.initialMessage,
-      [testData.resetSignature],
-      testData.issuerPrivateKey);
-      await new Promise(r => setTimeout(r, testData.timeToWaitForBlockConfirmation));
-  } catch (err) {
-    console.log("send rawtx error: ", err);
-  }
-  try {
-    await contract.AddKeyByRecovery(
-      testData.addedPubkey,
-      [0],
-      testData.initialMessage,
-      [testData.resetSignature],
-      testData.issuerPrivateKey);
-      await new Promise(r => setTimeout(r, testData.timeToWaitForBlockConfirmation));
-  } catch (err) {
-    console.log("send rawtx error: ", err);
-  }
-  expect(contract.getIssuerPublicKeys()).resolves.toEqual([testData.issuerPublicKeys[0], testData.addedPubkey]);
-  try {
-    await contract.RemoveKeyByRecovery(
-      testData.addedPubkey,
-      [0],
-      testData.initialMessage,
-      [testData.resetSignature],
-      testData.issuerPrivateKey);
-      await new Promise(r => setTimeout(r, testData.timeToWaitForBlockConfirmation));
-  } catch (err) {
-    console.log("send rawtx error: ", err);
-  }
-  expect(contract.getIssuerPublicKeys()).resolves.toEqual([testData.issuerPublicKeys]);
 });
