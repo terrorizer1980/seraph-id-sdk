@@ -48,7 +48,7 @@
   ],
   "dependencies": {
     "@cityofzion/neon-js": "^5.0.0-next.11",
-    "util": "^0.12.3"
+    "util": "^0.12.5"
   },
   "resolutions": {
     "crypto-js": "4.0.0",
