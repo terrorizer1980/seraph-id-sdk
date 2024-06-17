@@ -47,7 +47,7 @@
     "lib/**/*"
   ],
   "dependencies": {
-    "@cityofzion/neon-js": "^5.0.0-next.11",
+    "@cityofzion/neon-js": "^5.0.0",
     "util": "^0.12.3"
   },
   "resolutions": {
